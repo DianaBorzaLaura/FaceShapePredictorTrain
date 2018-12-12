@@ -7,93 +7,80 @@ import cv2
 import glob
 import re
 import random
+from xml.dom import minidom
+
+
+class Facial_landmarks:
+
+    def __init__(self, imgs, img_paths, shape_predictor):
+        self.img_paths = img_paths
+        self.imgs = imgs
+        self.shape_predictor = shape_predictor
+        self.face_lands = {}
+        self.face_rects = {}
 
 
 
-predictor_path = "shape_predictor_68_face_landmarks.dat"
-#predictor_path = "detector.svm"
-image_path = "images/imagine.jpg"
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(predictor_path)
-#predictor = dlib.simple_object_detector(predictor_path)
+    def detect_facial_landmarks(self):
+        for img in self.imgs:
+            image = imutils.resize(img, width=500)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            rects = self.shape_predictor(gray, 1)
 
-out = open("trainings.xml", "w")
-test = open("testing.xml", "w")
-out.write("<dataset>\n")
-test.write("<dataset>\n")
-out.write("<images>\n")
-test.write("<images>\n")
+            face_rects = []
+            for (i, rect) in enumerate(rects):
+                shape = self.shape_predictor(gray, rect)
+                shape = face_utils.shape_to_np(shape)
 
-for image_path in glob.glob("faces/7285955@N06/*.jpg"):
-    r = random.randint(0,100)
-    print(r)
-    image = cv2.imread(image_path)
-    image = imutils.resize(image, width=500)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                (x, y, w, h) = face_utils.rect_to_bb(rect)
+                self.face_rects[img] = [x,y,w,h]
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
 
-    rects = detector(gray, 1)
-    #rects = detector(image)
+                cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    if (r > 10):
-        out.write(f" <image file='{image_path}'>\n")
+                lands = []
+                for (j, (x,y)) in enumerate(shape):
+                    cv2.circle(image, (x,y), 1, (0, 0, 255), -1)
+                    index = "{0:0=2d}".format(j)
+                    lands.append([x,y])
 
-        for (i, rect) in enumerate(rects):
-            shape = predictor(gray, rect)
-            shape = face_utils.shape_to_np(shape)
-
-            (x, y, w, h) = face_utils.rect_to_bb(rect)
-            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-            out.write(f"    <box top='{y}' left='{x}' width='{w}' height='{h}'>\n")
-
-            cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            for (j, (x, y)) in enumerate(shape):
-                cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
-                index = "{0:0=2d}".format(j)
-                out.write(f"    <part name='{index}' x='{x}' y='{y}'/>\n")
+                self.face_lands[img] = lands
 
 
-            out.write(f"</box>\n")
+    def get_face_lands(self):
+        return self.face_lands
 
-        out.write(f"</image>\n")
-        # cv2.imshow("Output", image)
-        # cv2.waitKey(0)
+    def get_photo_landmarks(self, photo):
+        return self.face_lands[photo]
 
+    def load_face_predictor(self, predictor):
+        self.shape_predictor = predictor
 
+    def read_xml(self, file):
+        l = []
+        i = 0
+        imgs = []
+        xmldoc = minidom.parse(file)
+        img = xmldoc.getElementsByTagName('image')
+        for im in img:
+            imgs.append(im.attributes['file'].value)
+        itemlist = xmldoc.getElementsByTagName('part')
+        j = 0
+        for s in itemlist:
 
-    else:
-        test.write(f" <image file='{image_path}'>\n")
+            if (i < 68):
+                l.append([s.attributes['x'].value, s.attributes['y'].value])
+                i += 1
 
-        for (i, rect) in enumerate(rects):
-            shape = predictor(gray, rect)
-            shape = face_utils.shape_to_np(shape)
-
-            (x, y, w, h) = face_utils.rect_to_bb(rect)
-            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-            test.write(f"    <box top='{y}' left='{x}' width='{w}' height='{h}'>\n")
-
-            cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            for (j, (x, y)) in enumerate(shape):
-                cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
-                index = "{0:0=2d}".format(j)
-                test.write(f"    <part name='{index}' x='{x}' y='{y}'/>\n")
-            test.write(f"</box>\n")
-
-        test.write(f"</image>\n")
-        # cv2.imshow("Output", image)
-        # cv2.waitKey(0)
+            else:
+                self.face_lands[imgs[j]] = l
+                j += 1
+                i = 0
+                l = []
 
 
-out.write(f"</images>\n")
-out.write(f"</dataset>\n")
-out.close()
-
-test.write(f"</images>\n")
-test.write(f"</dataset>\n")
-test.close()
+    def export_to_xml(self, img):
+        sir = "<image file='img'>\n"
+        sir += "\t<box top='>"
