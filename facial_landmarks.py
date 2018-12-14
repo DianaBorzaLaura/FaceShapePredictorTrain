@@ -1,11 +1,12 @@
 from xml.dom import minidom
-
-import ET as ET
+from dlib_point_enum import Indexing
 import cv2
 import dlib
 import imutils
 from imutils import face_utils
 import xml.etree.ElementTree as ET
+from metrics import *
+import metrics
 
 
 def indent(elem, level=0):
@@ -104,6 +105,7 @@ class Facial_landmarks:
         predictor = dlib.shape_predictor(predictor)
 
     def read_xml(self, file):
+        face_lands = {}
         l = []
         i = 0
         imgs = []
@@ -120,10 +122,12 @@ class Facial_landmarks:
                 i += 1
 
             else:
-                self.face_lands[imgs[j]] = l
+                face_lands[imgs[j]] = l
                 j += 1
                 i = 0
                 l = []
+
+        return face_lands
 
 
     def export_to_xml(self, img):
@@ -144,6 +148,36 @@ class Facial_landmarks:
         indent(root)
         with open('trainings.xml', 'w') as f:
             f.write(ET.tostring(root, encoding='utf8').decode('utf8'))
+
+
+    def eval_predictor(self,start=0, stop = 68, gt_xml_path = None, pred_xml_path = None, predictor_path = None, gt_vals = None, pred_vals = None):
+        points = list(range(start, stop))
+
+        if (gt_xml_path != None and pred_xml_path != None):
+            ground_truth = self.read_xml(gt_xml_path)
+            predicted = self.read_xml(pred_xml_path)
+
+
+            metric = Metrics(points, predicted, ground_truth, 2)
+            mean = metric.mean_error()
+            variance = metric.variance()
+
+            return (mean, variance)
+
+        if(gt_vals != None and pred_vals != None):
+            metric = Metrics(points, pred_vals, gt_vals, 2)
+            mean = metric.mean_error()
+            variance = metric.variance()
+
+            return (mean, variance)
+
+        if (gt_xml_path != None and predictor_path != None):
+            ground_truth = self.read_xml(gt_xml_path)
+            self.load_face_predictor(predictor_path)
+
+            self.detect_facial_landmarks()
+
+
 
 
 
