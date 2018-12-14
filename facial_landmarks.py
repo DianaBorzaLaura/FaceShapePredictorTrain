@@ -130,15 +130,20 @@ class Facial_landmarks:
         (x, y, w, h) = self.get_face_rects(img)
         tree = ET.parse('trainings.xml')
         root = tree.getroot()
+        nodes = root.findall("<\images>")
+        nodes.remove(nodes[len(nodes)])
+        print(ET.tostring(nodes, encoding='utf8').decode('utf8'))
 
         start = ET.SubElement(root, 'image')
         box = ET.SubElement(start, 'box', top=str(x), left=str(y), width=str(w), height=str(h))
 
-        res = [[1, (2, 3)], [2, (3, 4)]]
+        res = self.get_photo_landmarks(img)
         for (j, (x, y)) in res:
             part = ET.SubElement(box, 'part', name=str(j), x=str(x), y=str(y))
 
-        # print(ET.tostring(root).decode())
         indent(root)
         with open('trainings.xml', 'w') as f:
             f.write(ET.tostring(root, encoding='utf8').decode('utf8'))
+
+
+
