@@ -44,12 +44,11 @@ def read_xml(file):
 # read_xml('trainings.xml')
 # read_xml('predicted.xml')
 
-def mean_error(no_pt):
+def mean_error(no_pt, pred, grtr):
     #no_pt: list of the points
     #pred: list of lists of tuples: [[(x1,y1), ..., (xn, yn)], [],...[]] for every photo
     #grtr: list of lists of tuples
-    pred = read_xml('predicted.xml')
-    grtr = read_xml('testing.xml')
+
     #print(pred['faces/7285955@N06/coarse_tilt_aligned_face.2050.9486768763_e52727c632_o.jpg'])
     err = 0
     means = []
@@ -70,8 +69,10 @@ def mean_error(no_pt):
 
     return (means, variances)
 
-no_pt = [2,3]
-print(mean_error(no_pt))
+# no_pt = [2,3]
+# pred = read_xml('predicted.xml')
+# grtr = read_xml('testing.xml')
+# print(mean_error(no_pt, pred, grtr))
 # def plots(res):
 #     data = []
 #     for i in res[1].keys():
@@ -96,6 +97,10 @@ print(mean_error(no_pt))
 #res = mean_error(no_pt, pred, grtr)
 #print(res)
 # plots(res)
+
+sir = ""
+sir += "asbsdh"
+print(sir)
 
 
 
